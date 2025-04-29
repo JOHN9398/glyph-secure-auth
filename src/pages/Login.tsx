@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ImagePasswordInput } from "@/components/ImagePasswordInput";
-import { ArrowRight, Info, Check } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,21 +28,30 @@ const Login = () => {
   const [userImage, setUserImage] = useState<string | null>(null);
   const [passwordCoordinates, setPasswordCoordinates] = useState<Array<{ x: number; y: number }>>([]);
   const [attempts, setAttempts] = useState<number>(0);
+  const [requiredClicks, setRequiredClicks] = useState<number>(3);
 
   // Simulate fetching user's image when email is entered
   useEffect(() => {
-    // For demo purposes, check localStorage to see if this user has registered
     if (email) {
       try {
         const storedUserData = localStorage.getItem(`user_${email}`);
         if (storedUserData) {
           const userData = JSON.parse(storedUserData);
+          console.log("Found user data:", userData);
           if (userData.selectedImage) {
             setUserImage(userData.selectedImage);
+            // If user has custom number of required clicks, use that
+            if (userData.passwordCoordinates && userData.passwordCoordinates.length) {
+              setRequiredClicks(userData.passwordCoordinates.length);
+            }
           }
+        } else {
+          console.log("No stored data found for email:", email);
+          setUserImage(null);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
+        setUserImage(null);
       }
     }
   }, [email]);
@@ -58,7 +67,17 @@ const Login = () => {
         return;
       }
       
-      // In a real app, we would verify the email exists and fetch the user's image
+      // Check if user exists in localStorage
+      const storedUserData = localStorage.getItem(`user_${email}`);
+      if (!storedUserData) {
+        toast({
+          title: "Account not found",
+          description: "No account found with this email. Please register first.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       setStep(2);
     }
   };
@@ -66,38 +85,60 @@ const Login = () => {
   const handlePasswordComplete = (coordinates: Array<{ x: number; y: number }>) => {
     setPasswordCoordinates(coordinates);
     
-    // Simple validation logic for demo purposes
-    // In a real app, this would be a secure server-side verification
-    const isCorrect = validateCoordinates(coordinates, correctCoordinates);
-    
-    if (isCorrect) {
-      toast({
-        title: "Login successful!",
-        description: "Welcome back to GlyphSecure.",
-        variant: "default"
-      });
-      
-      // Redirect to dashboard
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1500);
-    } else {
-      setAttempts(prev => prev + 1);
-      
-      if (attempts >= 2) {
+    try {
+      // Get user data from localStorage
+      const storedUserData = localStorage.getItem(`user_${email}`);
+      if (!storedUserData) {
         toast({
-          title: "Too many failed attempts",
-          description: "Please reset your password or try again later.",
+          title: "Account not found",
+          description: "No account found with this email.",
           variant: "destructive"
         });
-      } else {
-        toast({
-          title: "Incorrect password",
-          description: `Wrong click pattern. You have ${3 - attempts - 1} attempts remaining.`,
-          variant: "destructive"
-        });
-        setPasswordCoordinates([]);
+        return;
       }
+      
+      const userData = JSON.parse(storedUserData);
+      const savedCoordinates = userData.passwordCoordinates;
+      
+      // Validate the coordinates
+      const isCorrect = validateCoordinates(coordinates, savedCoordinates);
+      
+      if (isCorrect) {
+        toast({
+          title: "Login successful!",
+          description: "Welcome back to GlyphSecure.",
+          variant: "default"
+        });
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 1500);
+      } else {
+        setAttempts(prev => prev + 1);
+        
+        if (attempts >= 2) {
+          toast({
+            title: "Too many failed attempts",
+            description: "Please reset your password or try again later.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Incorrect password",
+            description: `Wrong click pattern. You have ${3 - attempts - 1} attempts remaining.`,
+            variant: "destructive"
+          });
+          setPasswordCoordinates([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error during login:", error);
+      toast({
+        title: "Login error",
+        description: "An error occurred during login. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -184,7 +225,7 @@ const Login = () => {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p className="text-sm">
-                              Click on the 3 points that you selected during registration to authenticate your account.
+                              Click on the {requiredClicks} points that you selected during registration to authenticate your account.
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -206,8 +247,10 @@ const Login = () => {
                   <ImagePasswordInput 
                     imageUrl={userImage || ''} 
                     fallbackImageUrl={defaultImage}
-                    requiredClicks={3}
+                    requiredClicks={requiredClicks}
                     onComplete={handlePasswordComplete}
+                    minClicks={requiredClicks}
+                    maxClicks={requiredClicks}
                   />
                   
                   <div className="mt-6 text-center">

@@ -28,6 +28,7 @@ const Register = () => {
   const [activeTab, setActiveTab] = useState<string>("default");
   const [passwordCoordinates, setPasswordCoordinates] = useState<Array<{ x: number; y: number }>>([]);
   const [isComplete, setIsComplete] = useState<boolean>(false);
+  const [clickCount, setClickCount] = useState<number>(3);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,10 +60,10 @@ const Register = () => {
     } else if (step === 2) {
       setStep(3);
     } else if (step === 3) {
-      if (passwordCoordinates.length < 3) {
+      if (passwordCoordinates.length < clickCount) {
         toast({
           title: "Password incomplete",
-          description: "Please select at least 3 points on the image.",
+          description: `Please select at least ${clickCount} points on the image.`,
           variant: "destructive"
         });
         return;
@@ -103,6 +104,11 @@ const Register = () => {
 
   const handlePasswordComplete = (coordinates: Array<{ x: number; y: number }>) => {
     setPasswordCoordinates(coordinates);
+  };
+
+  const handleClickCountChange = (count: number) => {
+    setClickCount(count);
+    setPasswordCoordinates([]);
   };
 
   return (
@@ -311,21 +317,43 @@ const Register = () => {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
                               <p className="text-sm">
-                                Click on 3 distinct points on the image to create your password. Choose points that you can easily remember but would be hard for others to guess.
+                                Click on {clickCount} distinct points on the image to create your password. Choose points that you can easily remember but would be hard for others to guess.
                               </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
                       <p className="text-gray-400 text-sm mt-1">
-                        Click on 3 distinct points on your image to create your password
+                        Click on {clickCount} distinct points on your image to create your password
                       </p>
+                      
+                      <div className="mt-4 mb-6">
+                        <label className="text-sm text-gray-300 block mb-2">Number of points required:</label>
+                        <div className="flex space-x-2">
+                          {[3, 4, 5, 6].map(count => (
+                            <button
+                              key={count}
+                              type="button"
+                              className={`px-3 py-2 rounded-md text-sm ${
+                                clickCount === count 
+                                  ? 'bg-cyberblue text-black' 
+                                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                              }`}
+                              onClick={() => handleClickCountChange(count)}
+                            >
+                              {count}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     
                     <ImagePasswordInput 
                       imageUrl={selectedImage} 
-                      requiredClicks={3}
+                      requiredClicks={clickCount}
                       onComplete={handlePasswordComplete}
+                      minClicks={clickCount}
+                      maxClicks={clickCount}
                     />
                     
                     <div className="mt-8 flex justify-between">
@@ -339,7 +367,7 @@ const Register = () => {
                       <Button 
                         onClick={handleContinue}
                         className="btn-neon"
-                        disabled={passwordCoordinates.length !== 3}
+                        disabled={passwordCoordinates.length < clickCount}
                       >
                         <span className="flex items-center gap-2">
                           Complete Registration

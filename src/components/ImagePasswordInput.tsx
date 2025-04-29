@@ -8,6 +8,8 @@ interface ImagePasswordInputProps {
   readOnly?: boolean;
   existingCoordinates?: Array<{ x: number; y: number }>;
   fallbackImageUrl?: string;
+  minClicks?: number;
+  maxClicks?: number;
 }
 
 export function ImagePasswordInput({
@@ -16,7 +18,9 @@ export function ImagePasswordInput({
   onComplete,
   readOnly = false,
   existingCoordinates,
-  fallbackImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80"
+  fallbackImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80",
+  minClicks = 3,
+  maxClicks = 6
 }: ImagePasswordInputProps) {
   const [clickPositions, setClickPositions] = useState<Array<{ x: number; y: number }>>([]);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -27,8 +31,10 @@ export function ImagePasswordInput({
   useEffect(() => {
     if (imageUrl) {
       setCurrentImageUrl(imageUrl);
+    } else if (!imageUrl && fallbackImageUrl) {
+      setCurrentImageUrl(fallbackImageUrl);
     }
-  }, [imageUrl]);
+  }, [imageUrl, fallbackImageUrl]);
 
   useEffect(() => {
     if (existingCoordinates && readOnly) {
@@ -61,7 +67,7 @@ export function ImagePasswordInput({
   }, [currentImageUrl]);
 
   const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (readOnly || clickPositions.length >= requiredClicks) return;
+    if (readOnly || clickPositions.length >= maxClicks) return;
     
     const rect = event.currentTarget.getBoundingClientRect();
     const x = ((event.clientX - rect.left) / rect.width);
@@ -70,14 +76,17 @@ export function ImagePasswordInput({
     const newClickPositions = [...clickPositions, { x, y }];
     setClickPositions(newClickPositions);
     
-    if (newClickPositions.length === requiredClicks) {
-      onComplete(newClickPositions);
+    if (newClickPositions.length >= minClicks && newClickPositions.length <= maxClicks) {
+      // Only complete if we've reached at least the minimum number of clicks
+      if (newClickPositions.length === requiredClicks || newClickPositions.length === maxClicks) {
+        onComplete(newClickPositions);
+      }
     }
   };
 
   const handleImageError = () => {
     // If the image fails to load, use the fallback
-    if (currentImageUrl !== fallbackImageUrl) {
+    if (currentImageUrl !== fallbackImageUrl && fallbackImageUrl) {
       console.log("Image failed to load, using fallback");
       setCurrentImageUrl(fallbackImageUrl);
     }
@@ -122,10 +131,12 @@ export function ImagePasswordInput({
         {!readOnly && (
           <div className="p-4 border-t border-cyberblue/30 bg-cyberdark/60 flex justify-between items-center">
             <div className="text-sm text-gray-300">
-              {clickPositions.length < requiredClicks ? (
-                <>Select {requiredClicks - clickPositions.length} more {requiredClicks - clickPositions.length === 1 ? 'point' : 'points'}</>
+              {clickPositions.length < minClicks ? (
+                <>Select at least {minClicks - clickPositions.length} more {minClicks - clickPositions.length === 1 ? 'point' : 'points'}</>
+              ) : clickPositions.length < maxClicks ? (
+                <>You can select up to {maxClicks - clickPositions.length} more points (optional)</>
               ) : (
-                <>All points selected</>
+                <>Maximum points selected</>
               )}
             </div>
             <button
