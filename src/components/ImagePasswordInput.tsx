@@ -7,6 +7,7 @@ interface ImagePasswordInputProps {
   onComplete: (coordinates: Array<{ x: number; y: number }>) => void;
   readOnly?: boolean;
   existingCoordinates?: Array<{ x: number; y: number }>;
+  fallbackImageUrl?: string;
 }
 
 export function ImagePasswordInput({
@@ -15,10 +16,19 @@ export function ImagePasswordInput({
   onComplete,
   readOnly = false,
   existingCoordinates,
+  fallbackImageUrl = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80"
 }: ImagePasswordInputProps) {
   const [clickPositions, setClickPositions] = useState<Array<{ x: number; y: number }>>([]);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [currentImageUrl, setCurrentImageUrl] = useState<string>(imageUrl || fallbackImageUrl);
   const imageRef = useRef<HTMLImageElement>(null);
+
+  // Update image if props change
+  useEffect(() => {
+    if (imageUrl) {
+      setCurrentImageUrl(imageUrl);
+    }
+  }, [imageUrl]);
 
   useEffect(() => {
     if (existingCoordinates && readOnly) {
@@ -48,7 +58,7 @@ export function ImagePasswordInput({
       window.removeEventListener('resize', updateImageSize);
       imageRef.current?.removeEventListener('load', updateImageSize);
     };
-  }, [imageUrl]);
+  }, [currentImageUrl]);
 
   const handleImageClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (readOnly || clickPositions.length >= requiredClicks) return;
@@ -62,6 +72,14 @@ export function ImagePasswordInput({
     
     if (newClickPositions.length === requiredClicks) {
       onComplete(newClickPositions);
+    }
+  };
+
+  const handleImageError = () => {
+    // If the image fails to load, use the fallback
+    if (currentImageUrl !== fallbackImageUrl) {
+      console.log("Image failed to load, using fallback");
+      setCurrentImageUrl(fallbackImageUrl);
     }
   };
 
@@ -79,9 +97,10 @@ export function ImagePasswordInput({
         >
           <img 
             ref={imageRef}
-            src={imageUrl} 
+            src={currentImageUrl} 
             alt="Authentication Image" 
             className="w-full object-cover"
+            onError={handleImageError}
           />
           
           {clickPositions.map((pos, index) => (

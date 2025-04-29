@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
 
-// Default image for demo - in a real app this would be fetched from the server
-const userImage = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80";
+// Default image as fallback
+const defaultImage = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80";
 
 // Demo password coordinates - in a real app these would be validated on the server
 const correctCoordinates = [
@@ -25,8 +25,27 @@ const Login = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<number>(1);
   const [email, setEmail] = useState<string>("");
+  const [userImage, setUserImage] = useState<string | null>(null);
   const [passwordCoordinates, setPasswordCoordinates] = useState<Array<{ x: number; y: number }>>([]);
   const [attempts, setAttempts] = useState<number>(0);
+
+  // Simulate fetching user's image when email is entered
+  useEffect(() => {
+    // For demo purposes, check localStorage to see if this user has registered
+    if (email) {
+      try {
+        const storedUserData = localStorage.getItem(`user_${email}`);
+        if (storedUserData) {
+          const userData = JSON.parse(storedUserData);
+          if (userData.selectedImage) {
+            setUserImage(userData.selectedImage);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    }
+  }, [email]);
 
   const handleContinue = () => {
     if (step === 1) {
@@ -185,7 +204,8 @@ const Login = () => {
                   </div>
                   
                   <ImagePasswordInput 
-                    imageUrl={userImage} 
+                    imageUrl={userImage || ''} 
+                    fallbackImageUrl={defaultImage}
                     requiredClicks={3}
                     onComplete={handlePasswordComplete}
                   />

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -69,16 +68,36 @@ const Register = () => {
         return;
       }
       
-      // Here we would normally send the registration data to the server
-      // For this demo, we're simulating a successful registration
-      setIsComplete(true);
-
-      // Display success notification
-      toast({
-        title: "Registration successful!",
-        description: "Your account has been created successfully.",
-        variant: "default",
-      });
+      // Save user data to localStorage for demo purposes
+      // In a real app, this would go to a backend API
+      try {
+        const userData = {
+          name,
+          email,
+          selectedImage,
+          // In a real app, you would NOT store the actual coordinates like this
+          // This is just for the demo
+          passwordCoordinates
+        };
+        
+        localStorage.setItem(`user_${email}`, JSON.stringify(userData));
+        
+        // Display success notification
+        toast({
+          title: "Registration successful!",
+          description: "Your account has been created successfully.",
+          variant: "default",
+        });
+        
+        setIsComplete(true);
+      } catch (error) {
+        console.error("Error saving user data:", error);
+        toast({
+          title: "Registration failed",
+          description: "There was an error creating your account. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
