@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { 
   Shield, Settings, LogOut, Bell, User, LockKeyhole,
-  AlertTriangle, Calendar, Clock, CheckCircle
+  AlertTriangle, Calendar, Clock, CheckCircle, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";

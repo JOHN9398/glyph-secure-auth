@@ -115,16 +115,20 @@
   
   /* Neon button */
   .btn-neon {
-    @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all bg-cyberdark rounded-md hover:bg-cyberdark group;
+    @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all bg-cyberdark rounded-md hover:bg-cyberdark;
   }
   
   .btn-neon span {
-    @apply relative w-full text-center transition-colors duration-300 ease-in-out text-white group-hover:text-white;
+    @apply relative w-full text-center transition-colors duration-300 ease-in-out text-white hover:text-white;
   }
   
   .btn-neon::before {
     content: '';
-    @apply absolute top-0 left-0 w-0 h-full bg-cyberblue transition-all duration-500 ease-in-out opacity-50 group-hover:w-full;
+    @apply absolute top-0 left-0 w-0 h-full bg-cyberblue transition-all duration-500 ease-in-out opacity-50;
+  }
+  
+  .btn-neon:hover::before {
+    @apply w-full;
   }
   
   .btn-neon-red::before {
