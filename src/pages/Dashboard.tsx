@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -36,6 +36,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage 
+} from "@/components/ui/form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 const activityLog = [
   {
@@ -68,27 +79,83 @@ const activityLog = [
   }
 ];
 
+// Define our validation schema
+const profileFormSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Please enter a valid email address." }),
+  dob: z.date().optional(),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  bio: z.string().optional()
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
 const Dashboard = () => {
   const navigate = useNavigate();
   
   // Get user data from localStorage or use default values
-  const storedUser = localStorage.getItem('user');
-  const initialUser = storedUser ? JSON.parse(storedUser) : {
-    name: "Alex Johnson",
-    email: "alex@example.com",
-    accountType: "Premium",
-    activeSince: "January 15, 2025",
-    dob: null,
-    phone: "",
-    address: "",
-    bio: ""
+  const getUserData = () => {
+    const storedUser = localStorage.getItem('user');
+    try {
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        // If we have stored user details from login, use them
+        return {
+          name: userData.name || "Alex Johnson",
+          email: userData.email || "alex@example.com",
+          accountType: userData.accountType || "Premium",
+          activeSince: userData.activeSince || "January 15, 2025",
+          dob: userData.dob ? new Date(userData.dob) : undefined,
+          phone: userData.phone || "",
+          address: userData.address || "",
+          bio: userData.bio || ""
+        };
+      }
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+    }
+    
+    // Default values
+    return {
+      name: "Alex Johnson",
+      email: "alex@example.com",
+      accountType: "Premium",
+      activeSince: "January 15, 2025",
+      dob: undefined,
+      phone: "",
+      address: "",
+      bio: ""
+    };
   };
   
-  const [user, setUser] = useState(initialUser);
   const [isEditing, setIsEditing] = useState(false);
-  const [date, setDate] = useState<Date | undefined>(
-    user.dob ? new Date(user.dob) : undefined
-  );
+  const [user, setUser] = useState(getUserData());
+  
+  // Setup form with react-hook-form
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      name: user.name,
+      email: user.email,
+      dob: user.dob,
+      phone: user.phone,
+      address: user.address,
+      bio: user.bio
+    }
+  });
+  
+  // Update form values when user data changes
+  useEffect(() => {
+    form.reset({
+      name: user.name,
+      email: user.email,
+      dob: user.dob,
+      phone: user.phone,
+      address: user.address,
+      bio: user.bio
+    });
+  }, [user, form]);
 
   const handleLogout = () => {
     toast({
@@ -111,33 +178,44 @@ const Dashboard = () => {
   };
   
   const handleEditToggle = () => {
-    setIsEditing(!isEditing);
     if (isEditing) {
-      // Save data to localStorage when exiting edit mode
-      localStorage.setItem('user', JSON.stringify(user));
-      toast({
-        title: "Profile updated",
-        description: "Your profile information has been saved."
+      // Submit the form if we're exiting edit mode
+      form.handleSubmit(onSubmit)();
+    } else {
+      // Reset form to current values when entering edit mode
+      form.reset({
+        name: user.name,
+        email: user.email,
+        dob: user.dob,
+        phone: user.phone,
+        address: user.address,
+        bio: user.bio
       });
     }
+    
+    setIsEditing(!isEditing);
   };
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setUser(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  
-  const handleDateChange = (selectedDate: Date | undefined) => {
-    setDate(selectedDate);
-    if (selectedDate) {
-      setUser(prev => ({
-        ...prev,
-        dob: selectedDate.toISOString()
-      }));
-    }
+  const onSubmit = (data: ProfileFormValues) => {
+    // Update user data with form values
+    const updatedUser = {
+      ...user,
+      name: data.name,
+      email: data.email,
+      dob: data.dob,
+      phone: data.phone || "",
+      address: data.address || "",
+      bio: data.bio || ""
+    };
+    
+    // Update state and save to localStorage
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    toast({
+      title: "Profile updated",
+      description: "Your profile information has been saved."
+    });
   };
   
   const handleAccountSettings = () => {
@@ -187,7 +265,9 @@ const Dashboard = () => {
               <p className="text-gray-400 mt-1">Managing your security is easier than ever</p>
             </div>
             
+            {/* Notification and Account dropdown */}
             <div className="flex gap-3">
+              {/* ... keep existing code (dropdown menus) */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="relative">
@@ -198,32 +278,7 @@ const Dashboard = () => {
                 <DropdownMenuContent align="end" className="w-80">
                   <DropdownMenuLabel>Notifications</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <div className="max-h-80 overflow-auto">
-                    <div className="p-3 hover:bg-secondary/50 cursor-pointer">
-                      <div className="flex gap-3">
-                        <div className="p-2 rounded-full bg-cyberblue/10">
-                          <LockKeyhole size={16} className="text-cyberblue" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Security Recommendation</p>
-                          <p className="text-xs text-gray-400">Review your account security settings</p>
-                          <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 hover:bg-secondary/50 cursor-pointer">
-                      <div className="flex gap-3">
-                        <div className="p-2 rounded-full bg-red-500/10">
-                          <AlertTriangle size={16} className="text-red-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Unusual Login Attempt</p>
-                          <p className="text-xs text-gray-400">From Safari on iPhone</p>
-                          <p className="text-xs text-gray-500 mt-1">Yesterday</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  {/* ... keep existing code (notification items) */}
                 </DropdownMenuContent>
               </DropdownMenu>
               
@@ -235,25 +290,7 @@ const Dashboard = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAccountSettings}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSecuritySettings}>
-                    <Shield className="mr-2 h-4 w-4" />
-                    <span>Security</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
+                  {/* ... keep existing code (account menu items) */}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -277,115 +314,155 @@ const Dashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    {isEditing ? (
-                      <Input 
-                        id="name" 
-                        name="name" 
-                        value={user.name} 
-                        onChange={handleInputChange} 
-                        className="input-glow"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium">{user.name}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    {isEditing ? (
-                      <Input 
-                        id="email" 
-                        name="email" 
-                        value={user.email} 
-                        onChange={handleInputChange} 
-                        className="input-glow"
-                        type="email"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium">{user.email}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="dob">Date of Birth</Label>
-                    {isEditing ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left",
-                              !date && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, "PPP") : <span>Select date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={handleDateChange}
-                            initialFocus
-                            className={cn("p-3 pointer-events-auto")}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <p className="text-sm font-medium">
-                        {user.dob ? format(new Date(user.dob), "PPP") : "Not specified"}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    {isEditing ? (
-                      <Input 
-                        id="phone" 
-                        name="phone" 
-                        value={user.phone} 
-                        onChange={handleInputChange} 
-                        className="input-glow"
-                        type="tel"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium">{user.phone || "Not specified"}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    {isEditing ? (
-                      <Input 
-                        id="address" 
-                        name="address" 
-                        value={user.address} 
-                        onChange={handleInputChange} 
-                        className="input-glow"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium">{user.address || "Not specified"}</p>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">About Me</Label>
-                    {isEditing ? (
-                      <Textarea 
-                        id="bio" 
-                        name="bio" 
-                        value={user.bio} 
-                        onChange={handleInputChange} 
-                        className="input-glow min-h-[80px]"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium">{user.bio || "No bio information"}</p>
-                    )}
-                  </div>
+                  {isEditing ? (
+                    <Form {...form}>
+                      <form className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} className="input-glow" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input {...field} className="input-glow" type="email" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="dob"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date of Birth</FormLabel>
+                              <FormControl>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      className={cn(
+                                        "w-full justify-start text-left",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {field.value ? (
+                                        format(field.value, "PPP")
+                                      ) : (
+                                        <span>Select date</span>
+                                      )}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={field.value}
+                                      onSelect={field.onChange}
+                                      initialFocus
+                                      className="p-3 pointer-events-auto"
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Phone</FormLabel>
+                              <FormControl>
+                                <Input {...field} className="input-glow" type="tel" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Address</FormLabel>
+                              <FormControl>
+                                <Input {...field} className="input-glow" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="bio"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>About Me</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} className="input-glow min-h-[80px]" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </form>
+                    </Form>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Full Name</Label>
+                        <p className="text-sm font-medium">{user.name}</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <p className="text-sm font-medium">{user.email}</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Date of Birth</Label>
+                        <p className="text-sm font-medium">
+                          {user.dob ? format(new Date(user.dob), "PPP") : "Not specified"}
+                        </p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <p className="text-sm font-medium">{user.phone || "Not specified"}</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Address</Label>
+                        <p className="text-sm font-medium">{user.address || "Not specified"}</p>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>About Me</Label>
+                        <p className="text-sm font-medium">{user.bio || "No bio information"}</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter>
                   <div className="w-full space-y-3">
@@ -437,7 +514,7 @@ const Dashboard = () => {
               </div>
             </div>
             
-            {/* Right Column: Activity Log */}
+            {/* Right Column: Activity Log and Security Statistics */}
             <div className="lg:col-span-2 space-y-6">
               <div className="cyber-card">
                 <h2 className="text-xl font-medium mb-6">Recent Activity</h2>
