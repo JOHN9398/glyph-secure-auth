@@ -5,10 +5,13 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { 
   Shield, Settings, LogOut, Bell, User, LockKeyhole,
-  AlertTriangle, Calendar, Clock, CheckCircle, Info
+  AlertTriangle, Calendar, Clock, CheckCircle, Info, Calendar as CalendarIcon,
+  Edit, Save
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +20,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { format } from "date-fns";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const activityLog = [
   {
@@ -51,12 +71,25 @@ const activityLog = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user] = useState({
+  
+  // Get user data from localStorage or use default values
+  const storedUser = localStorage.getItem('user');
+  const initialUser = storedUser ? JSON.parse(storedUser) : {
     name: "Alex Johnson",
     email: "alex@example.com",
     accountType: "Premium",
     activeSince: "January 15, 2025",
-  });
+    dob: null,
+    phone: "",
+    address: "",
+    bio: ""
+  };
+  
+  const [user, setUser] = useState(initialUser);
+  const [isEditing, setIsEditing] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(
+    user.dob ? new Date(user.dob) : undefined
+  );
 
   const handleLogout = () => {
     toast({
@@ -75,7 +108,51 @@ const Dashboard = () => {
       title: "Password reset initiated",
       description: "Follow the instructions to reset your graphical password."
     });
-    navigate("/register");
+    navigate("/reset-password");
+  };
+  
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    if (isEditing) {
+      // Save data to localStorage when exiting edit mode
+      localStorage.setItem('user', JSON.stringify(user));
+      toast({
+        title: "Profile updated",
+        description: "Your profile information has been saved."
+      });
+    }
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setUser(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  const handleDateChange = (selectedDate: Date | undefined) => {
+    setDate(selectedDate);
+    if (selectedDate) {
+      setUser(prev => ({
+        ...prev,
+        dob: selectedDate.toISOString()
+      }));
+    }
+  };
+  
+  const handleAccountSettings = () => {
+    toast({
+      title: "Account Settings",
+      description: "Account settings functionality will be implemented soon."
+    });
+  };
+  
+  const handleSecuritySettings = () => {
+    toast({
+      title: "Security Settings",
+      description: "Security settings functionality will be implemented soon."
+    });
   };
   
   const getActivityIcon = (activity: typeof activityLog[0]) => {
@@ -161,15 +238,15 @@ const Dashboard = () => {
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleAccountSettings}>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSecuritySettings}>
                     <Shield className="mr-2 h-4 w-4" />
                     <span>Security</span>
                   </DropdownMenuItem>
@@ -184,37 +261,156 @@ const Dashboard = () => {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Account Summary */}
+            {/* Left Column: User Profile Card */}
             <div className="lg:col-span-1 space-y-6">
-              <div className="cyber-card">
-                <h2 className="text-xl font-medium mb-6">Account Summary</h2>
-                
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Email:</span>
-                    <span>{user.email}</span>
+              <Card className="cyber-card border-cyberblue/20">
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl font-medium">User Profile</CardTitle>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={handleEditToggle}
+                      className="h-8 w-8"
+                    >
+                      {isEditing ? <Save size={16} /> : <Edit size={16} />}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    {isEditing ? (
+                      <Input 
+                        id="name" 
+                        name="name" 
+                        value={user.name} 
+                        onChange={handleInputChange} 
+                        className="input-glow"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium">{user.name}</p>
+                    )}
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Account Type:</span>
-                    <span className="px-2 py-0.5 bg-cyberblue/20 text-cyberblue rounded text-xs">
-                      {user.accountType}
-                    </span>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    {isEditing ? (
+                      <Input 
+                        id="email" 
+                        name="email" 
+                        value={user.email} 
+                        onChange={handleInputChange} 
+                        className="input-glow"
+                        type="email"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium">{user.email}</p>
+                    )}
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Active Since:</span>
-                    <span>{user.activeSince}</span>
+                  <div className="space-y-2">
+                    <Label htmlFor="dob">Date of Birth</Label>
+                    {isEditing ? (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left",
+                              !date && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {date ? format(date, "PPP") : <span>Select date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={date}
+                            onSelect={handleDateChange}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <p className="text-sm font-medium">
+                        {user.dob ? format(new Date(user.dob), "PPP") : "Not specified"}
+                      </p>
+                    )}
                   </div>
                   
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Security Status:</span>
-                    <span className="px-2 py-0.5 bg-green-500/20 text-green-500 rounded text-xs">
-                      Secure
-                    </span>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    {isEditing ? (
+                      <Input 
+                        id="phone" 
+                        name="phone" 
+                        value={user.phone} 
+                        onChange={handleInputChange} 
+                        className="input-glow"
+                        type="tel"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium">{user.phone || "Not specified"}</p>
+                    )}
                   </div>
-                </div>
-              </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    {isEditing ? (
+                      <Input 
+                        id="address" 
+                        name="address" 
+                        value={user.address} 
+                        onChange={handleInputChange} 
+                        className="input-glow"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium">{user.address || "Not specified"}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">About Me</Label>
+                    {isEditing ? (
+                      <Textarea 
+                        id="bio" 
+                        name="bio" 
+                        value={user.bio} 
+                        onChange={handleInputChange} 
+                        className="input-glow min-h-[80px]"
+                      />
+                    ) : (
+                      <p className="text-sm font-medium">{user.bio || "No bio information"}</p>
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <div className="w-full space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Account Type:</span>
+                      <span className="px-2 py-0.5 bg-cyberblue/20 text-cyberblue rounded text-xs">
+                        {user.accountType}
+                      </span>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Active Since:</span>
+                      <span>{user.activeSince}</span>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Security Status:</span>
+                      <span className="px-2 py-0.5 bg-green-500/20 text-green-500 rounded text-xs">
+                        Secure
+                      </span>
+                    </div>
+                  </div>
+                </CardFooter>
+              </Card>
               
               <div className="cyber-card">
                 <h2 className="text-xl font-medium mb-6">Security Options</h2>
@@ -229,12 +425,12 @@ const Dashboard = () => {
                     Change Graphical Password
                   </Button>
                   
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start" onClick={handleSecuritySettings}>
                     <Shield className="mr-2 h-4 w-4" />
                     Two-Factor Authentication
                   </Button>
                   
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start" onClick={handleAccountSettings}>
                     <Settings className="mr-2 h-4 w-4" />
                     Account Settings
                   </Button>
