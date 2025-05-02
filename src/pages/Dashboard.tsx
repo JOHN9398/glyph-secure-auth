@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -131,6 +132,7 @@ const Dashboard = () => {
   
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState(getUserData());
+  const [lastLogin, setLastLogin] = useState<string | null>(null);
   
   // Setup form with react-hook-form
   const form = useForm<ProfileFormValues>({
@@ -144,6 +146,27 @@ const Dashboard = () => {
       bio: user.bio
     }
   });
+  
+  // Get last login info from localStorage
+  useEffect(() => {
+    try {
+      // Try to get the last login time from localStorage
+      const lastLoginTime = localStorage.getItem('lastLoginTime');
+      if (lastLoginTime) {
+        const loginDate = new Date(JSON.parse(lastLoginTime));
+        setLastLogin(format(loginDate, "PPP 'at' p"));
+      }
+      
+      // If there's no last login time recorded, set it to now (first visit)
+      if (!lastLoginTime) {
+        const now = new Date();
+        localStorage.setItem('lastLoginTime', JSON.stringify(now.toISOString()));
+        setLastLogin(format(now, "PPP 'at' p"));
+      }
+    } catch (error) {
+      console.error("Error getting last login time:", error);
+    }
+  }, []);
   
   // Update form values when user data changes
   useEffect(() => {
@@ -162,6 +185,10 @@ const Dashboard = () => {
       title: "Logged out successfully",
       description: "You have been logged out of your account."
     });
+    
+    // Record the last logout time
+    const now = new Date();
+    localStorage.setItem('lastLoginTime', JSON.stringify(now.toISOString()));
     
     // Redirect to home page
     setTimeout(() => {
@@ -485,6 +512,42 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
+                </CardFooter>
+              </Card>
+              
+              {/* Login Credentials Card */}
+              <Card className="cyber-card border-cyberblue/20">
+                <CardHeader>
+                  <CardTitle className="text-xl font-medium">Login Credentials</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Email Address</Label>
+                    <p className="text-sm font-medium">{user.email}</p>
+                    <p className="text-xs text-gray-400">Used for account login and recovery</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Password Type</Label>
+                    <p className="text-sm font-medium">Graphical Password</p>
+                    <p className="text-xs text-gray-400">Your account is secured with a pattern of clicks</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Last Login</Label>
+                    <p className="text-sm font-medium">{lastLogin || "First login"}</p>
+                    <p className="text-xs text-gray-400">Keep track of your account access</p>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={handleResetPassword}
+                  >
+                    <LockKeyhole className="mr-2 h-4 w-4" />
+                    Change Graphical Password
+                  </Button>
                 </CardFooter>
               </Card>
               
