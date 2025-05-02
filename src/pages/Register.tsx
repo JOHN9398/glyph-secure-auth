@@ -10,12 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
-import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80",
@@ -37,10 +32,9 @@ const Register = () => {
   const [clickCount, setClickCount] = useState<number>(3);
   
   // Additional user details
-  const [dob, setDob] = useState<Date | undefined>(undefined);
+  const [dob, setDob] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [address, setAddress] = useState<string>("");
-  const [bio, setBio] = useState<string>("");
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,7 +86,6 @@ const Register = () => {
           dob,
           phone,
           address,
-          bio,
           accountType: "Premium", // Default value for demo
           activeSince: format(new Date(), "MMMM d, yyyy"),
           // In a real app, you would NOT store the actual coordinates like this
@@ -211,31 +204,17 @@ const Register = () => {
                         />
                       </div>
                       
-                      {/* Additional user details */}
+                      {/* Changed date of birth from calendar to input */}
                       <div>
                         <Label htmlFor="dob">Date of Birth</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full mt-1 justify-start text-left input-glow",
-                                !dob && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dob ? format(dob, "PPP") : <span>Select date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={dob}
-                              onSelect={setDob}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
+                        <Input 
+                          id="dob"
+                          type="date" 
+                          placeholder="YYYY-MM-DD"
+                          value={dob}
+                          onChange={(e) => setDob(e.target.value)}
+                          className="input-glow mt-1"
+                        />
                       </div>
                       
                       <div>
@@ -259,17 +238,6 @@ const Register = () => {
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
                           className="input-glow mt-1"
-                        />
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor="bio">About Me</Label>
-                        <Textarea 
-                          id="bio"
-                          placeholder="Tell us about yourself" 
-                          value={bio}
-                          onChange={(e) => setBio(e.target.value)}
-                          className="input-glow mt-1 min-h-[80px]"
                         />
                       </div>
                     </div>
