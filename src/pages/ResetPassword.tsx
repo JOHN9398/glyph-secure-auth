@@ -1,15 +1,10 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { ImagePasswordInput } from "@/components/ImagePasswordInput";
-import { ArrowRight, Mail, RotateCw, RefreshCcw, LockOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { RotateCw, LockOpen } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +22,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+// Import our new components
+import { EmailVerification } from "@/components/reset-password/EmailVerification";
+import { ImageSelection } from "@/components/reset-password/ImageSelection";
+import { PasswordConfirmation } from "@/components/reset-password/PasswordConfirmation";
 
 // Default images for password reset
 const defaultImages = [
@@ -48,83 +48,6 @@ const ResetPassword = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [resetSuccess, setResetSuccess] = useState<boolean>(false);
   const [verificationSent, setVerificationSent] = useState<boolean>(false);
-  const [resendDisabled, setResendDisabled] = useState<boolean>(false);
-  const [resendCountdown, setResendCountdown] = useState<number>(0);
-
-  // Email verification
-  const handleSendVerification = () => {
-    if (!email) {
-      toast({
-        title: "Email required",
-        description: "Please enter your email address to continue.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check if user exists in localStorage
-    const storedUserData = localStorage.getItem(`user_${email}`);
-    if (!storedUserData) {
-      toast({
-        title: "Account not found",
-        description: "No account found with this email. Please register first.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // In a real app, this would send a real verification code
-    // For demo purposes, we'll generate a random code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setVerificationCode(code);
-    setVerificationSent(true);
-    
-    // Show the code (in a real app, this would be sent via email)
-    toast({
-      title: "Verification code sent",
-      description: `For demo purposes, your verification code is: ${code}`,
-    });
-    
-    // Disable resend button for 60 seconds
-    setResendDisabled(true);
-    setResendCountdown(60);
-    
-    const countdownInterval = setInterval(() => {
-      setResendCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          setResendDisabled(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const handleVerifyCode = () => {
-    if (!enteredCode) {
-      toast({
-        title: "Code required",
-        description: "Please enter the verification code.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (enteredCode === verificationCode) {
-      toast({
-        title: "Email verified",
-        description: "Your email has been successfully verified."
-      });
-      setStep(2);
-    } else {
-      toast({
-        title: "Invalid code",
-        description: "The verification code you entered is incorrect. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleImageSelect = (image: string) => {
     setSelectedImage(image);
@@ -215,176 +138,37 @@ const ResetPassword = () => {
             
             <div className="cyber-card animate-fade-in">
               {step === 1 && (
-                <>
-                  <h2 className="text-xl font-medium mb-6">Verify Your Email</h2>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <Label htmlFor="email">Email Address</Label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <Mail className="text-muted-foreground h-5 w-5" />
-                        </div>
-                        <Input 
-                          id="email"
-                          type="email" 
-                          placeholder="Enter your email address" 
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="input-glow pl-10"
-                          disabled={verificationSent}
-                        />
-                      </div>
-                    </div>
-                    
-                    {!verificationSent ? (
-                      <Button 
-                        onClick={handleSendVerification}
-                        className="btn-neon w-full"
-                      >
-                        <span className="flex items-center justify-center gap-2">
-                          Send Verification Code <ArrowRight size={16} />
-                        </span>
-                      </Button>
-                    ) : (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="verificationCode">Verification Code</Label>
-                          <Input
-                            id="verificationCode"
-                            type="text"
-                            placeholder="Enter 6-digit code"
-                            value={enteredCode}
-                            onChange={(e) => setEnteredCode(e.target.value)}
-                            className="input-glow"
-                            maxLength={6}
-                          />
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <Button
-                            onClick={handleVerifyCode}
-                            className="btn-neon w-full"
-                          >
-                            <span className="flex items-center justify-center gap-2">
-                              Verify Code <LockOpen size={16} />
-                            </span>
-                          </Button>
-                          
-                          <div className="flex justify-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleSendVerification}
-                              disabled={resendDisabled}
-                              className="text-xs"
-                            >
-                              <RefreshCcw className="mr-2 h-3 w-3" />
-                              {resendDisabled 
-                                ? `Resend in ${resendCountdown}s` 
-                                : "Resend verification code"}
-                            </Button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  
-                  <div className="mt-6 text-center">
-                    <Link to="/login" className="text-sm text-cyberblue hover:underline">
-                      Back to login
-                    </Link>
-                  </div>
-                </>
+                <EmailVerification 
+                  email={email}
+                  setEmail={setEmail}
+                  enteredCode={enteredCode}
+                  setEnteredCode={setEnteredCode}
+                  verificationCode={verificationCode}
+                  setVerificationCode={setVerificationCode}
+                  verificationSent={verificationSent}
+                  setVerificationSent={setVerificationSent}
+                  onVerifySuccess={() => setStep(2)}
+                />
               )}
               
               {step === 2 && (
-                <>
-                  <h2 className="text-xl font-medium mb-6">Choose a New Image</h2>
-                  
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Select an image that you'll use for your graphical password.
-                    </p>
-                    
-                    <div className="grid grid-cols-3 gap-2">
-                      {defaultImages.map((image, index) => (
-                        <div 
-                          key={index}
-                          className={`
-                            relative rounded-md overflow-hidden border-2 transition-all
-                            ${selectedImage === image ? 'border-cyberblue shadow-glow' : 'border-transparent'}
-                          `}
-                          onClick={() => handleImageSelect(image)}
-                        >
-                          <img 
-                            src={image} 
-                            alt={`Password Image ${index + 1}`}
-                            className="w-full h-24 object-cover cursor-pointer"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="mt-6">
-                      <h3 className="text-md font-medium mb-2">Set Your New Password</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Click on 3 to 6 points on the image to create your new graphical password.
-                      </p>
-                      
-                      <ImagePasswordInput 
-                        imageUrl={selectedImage} 
-                        requiredClicks={3} 
-                        onComplete={handlePasswordComplete}
-                        minClicks={3}
-                        maxClicks={6}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 text-center">
-                    <Button 
-                      variant="ghost" 
-                      className="text-sm text-cyberblue"
-                      onClick={() => setStep(1)}
-                    >
-                      Back
-                    </Button>
-                  </div>
-                </>
+                <ImageSelection
+                  selectedImage={selectedImage}
+                  defaultImages={defaultImages}
+                  handleImageSelect={handleImageSelect}
+                  passwordCoordinates={passwordCoordinates}
+                  handlePasswordComplete={handlePasswordComplete}
+                  onBack={() => setStep(1)}
+                />
               )}
               
               {step === 3 && (
-                <>
-                  <h2 className="text-xl font-medium mb-6">Confirm Your Password</h2>
-                  
-                  <div className="space-y-4">
-                    <Alert className="bg-amber-500/10 border-amber-500/20 mb-4">
-                      <AlertTitle className="text-amber-500">Confirm your new password</AlertTitle>
-                      <AlertDescription className="text-muted-foreground">
-                        Please click the same {requiredClicks} points in the same order to confirm your new password.
-                      </AlertDescription>
-                    </Alert>
-                    
-                    <ImagePasswordInput 
-                      imageUrl={selectedImage} 
-                      requiredClicks={requiredClicks} 
-                      onComplete={handleConfirmPasswordComplete}
-                      minClicks={requiredClicks}
-                      maxClicks={requiredClicks}
-                    />
-                  </div>
-                  
-                  <div className="mt-6 text-center">
-                    <Button 
-                      variant="ghost" 
-                      className="text-sm text-cyberblue"
-                      onClick={() => setStep(2)}
-                    >
-                      Back
-                    </Button>
-                  </div>
-                </>
+                <PasswordConfirmation
+                  selectedImage={selectedImage}
+                  requiredClicks={requiredClicks}
+                  handleConfirmPasswordComplete={handleConfirmPasswordComplete}
+                  onBack={() => setStep(2)}
+                />
               )}
             </div>
           </div>
