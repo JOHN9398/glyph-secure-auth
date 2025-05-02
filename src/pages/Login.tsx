@@ -14,13 +14,6 @@ import { toast } from "@/components/ui/use-toast";
 // Default image as fallback
 const defaultImage = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80";
 
-// Demo password coordinates - in a real app these would be validated on the server
-const correctCoordinates = [
-  { x: 0.3, y: 0.2 },
-  { x: 0.7, y: 0.4 },
-  { x: 0.5, y: 0.8 }
-];
-
 const Login = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<number>(1);
@@ -104,6 +97,13 @@ const Login = () => {
       const isCorrect = validateCoordinates(coordinates, savedCoordinates);
       
       if (isCorrect) {
+        // Store user data for dashboard use
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Record login time
+        const now = new Date();
+        localStorage.setItem('lastLoginTime', JSON.stringify(now.toISOString()));
+        
         toast({
           title: "Login successful!",
           description: "Welcome back to GlyphSecure.",

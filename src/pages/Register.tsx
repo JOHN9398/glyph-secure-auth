@@ -10,6 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80",
@@ -29,6 +35,12 @@ const Register = () => {
   const [passwordCoordinates, setPasswordCoordinates] = useState<Array<{ x: number; y: number }>>([]);
   const [isComplete, setIsComplete] = useState<boolean>(false);
   const [clickCount, setClickCount] = useState<number>(3);
+  
+  // Additional user details
+  const [dob, setDob] = useState<Date | undefined>(undefined);
+  const [phone, setPhone] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [bio, setBio] = useState<string>("");
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,12 +88,26 @@ const Register = () => {
           name,
           email,
           selectedImage,
+          // Additional user details
+          dob,
+          phone,
+          address,
+          bio,
+          accountType: "Premium", // Default value for demo
+          activeSince: format(new Date(), "MMMM d, yyyy"),
           // In a real app, you would NOT store the actual coordinates like this
           // This is just for the demo
           passwordCoordinates
         };
         
         localStorage.setItem(`user_${email}`, JSON.stringify(userData));
+        
+        // Store basic user info for dashboard
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Set last login time
+        const now = new Date();
+        localStorage.setItem('lastLoginTime', JSON.stringify(now.toISOString()));
         
         // Display success notification
         toast({
@@ -182,6 +208,68 @@ const Register = () => {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="input-glow mt-1"
+                        />
+                      </div>
+                      
+                      {/* Additional user details */}
+                      <div>
+                        <Label htmlFor="dob">Date of Birth</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full mt-1 justify-start text-left input-glow",
+                                !dob && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dob ? format(dob, "PPP") : <span>Select date</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={dob}
+                              onSelect={setDob}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input 
+                          id="phone"
+                          type="tel" 
+                          placeholder="Enter your phone number" 
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="input-glow mt-1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="address">Address</Label>
+                        <Input 
+                          id="address"
+                          type="text" 
+                          placeholder="Enter your address" 
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          className="input-glow mt-1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="bio">About Me</Label>
+                        <Textarea 
+                          id="bio"
+                          placeholder="Tell us about yourself" 
+                          value={bio}
+                          onChange={(e) => setBio(e.target.value)}
+                          className="input-glow mt-1 min-h-[80px]"
                         />
                       </div>
                     </div>
