@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ImagePasswordInput } from "@/components/ImagePasswordInput";
-import { ArrowRight, Mail, RotateCw } from "lucide-react";
+import { ArrowRight, Mail, RotateCw, RefreshCcw, LockOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,14 +39,20 @@ const ResetPassword = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<number>(1);
   const [email, setEmail] = useState<string>("");
+  const [verificationCode, setVerificationCode] = useState<string>("");
+  const [enteredCode, setEnteredCode] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<string>(defaultImages[0]);
   const [passwordCoordinates, setPasswordCoordinates] = useState<Array<{ x: number; y: number }>>([]);
   const [confirmPasswordCoordinates, setConfirmPasswordCoordinates] = useState<Array<{ x: number; y: number }>>([]);
   const [requiredClicks, setRequiredClicks] = useState<number>(3);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [resetSuccess, setResetSuccess] = useState<boolean>(false);
+  const [verificationSent, setVerificationSent] = useState<boolean>(false);
+  const [resendDisabled, setResendDisabled] = useState<boolean>(false);
+  const [resendCountdown, setResendCountdown] = useState<number>(0);
 
-  const handleContinue = () => {
+  // Email verification
+  const handleSendVerification = () => {
     if (!email) {
       toast({
         title: "Email required",
@@ -67,14 +73,57 @@ const ResetPassword = () => {
       return;
     }
 
-    // In a real app, this would send a verification email
-    // For demo purposes, we'll just proceed to next step
+    // In a real app, this would send a real verification code
+    // For demo purposes, we'll generate a random code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setVerificationCode(code);
+    setVerificationSent(true);
+    
+    // Show the code (in a real app, this would be sent via email)
     toast({
-      title: "Email verified",
-      description: "In a real app, we would send a verification link to your email."
+      title: "Verification code sent",
+      description: `For demo purposes, your verification code is: ${code}`,
     });
+    
+    // Disable resend button for 60 seconds
+    setResendDisabled(true);
+    setResendCountdown(60);
+    
+    const countdownInterval = setInterval(() => {
+      setResendCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          setResendDisabled(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
-    setStep(2);
+  const handleVerifyCode = () => {
+    if (!enteredCode) {
+      toast({
+        title: "Code required",
+        description: "Please enter the verification code.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (enteredCode === verificationCode) {
+      toast({
+        title: "Email verified",
+        description: "Your email has been successfully verified."
+      });
+      setStep(2);
+    } else {
+      toast({
+        title: "Invalid code",
+        description: "The verification code you entered is incorrect. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleImageSelect = (image: string) => {
@@ -169,7 +218,7 @@ const ResetPassword = () => {
                 <>
                   <h2 className="text-xl font-medium mb-6">Verify Your Email</h2>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div>
                       <Label htmlFor="email">Email Address</Label>
                       <div className="relative">
@@ -183,20 +232,62 @@ const ResetPassword = () => {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="input-glow pl-10"
+                          disabled={verificationSent}
                         />
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="mt-8">
-                    <Button 
-                      onClick={handleContinue}
-                      className="btn-neon w-full"
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        Continue <ArrowRight size={16} />
-                      </span>
-                    </Button>
+                    
+                    {!verificationSent ? (
+                      <Button 
+                        onClick={handleSendVerification}
+                        className="btn-neon w-full"
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          Send Verification Code <ArrowRight size={16} />
+                        </span>
+                      </Button>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="verificationCode">Verification Code</Label>
+                          <Input
+                            id="verificationCode"
+                            type="text"
+                            placeholder="Enter 6-digit code"
+                            value={enteredCode}
+                            onChange={(e) => setEnteredCode(e.target.value)}
+                            className="input-glow"
+                            maxLength={6}
+                          />
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <Button
+                            onClick={handleVerifyCode}
+                            className="btn-neon w-full"
+                          >
+                            <span className="flex items-center justify-center gap-2">
+                              Verify Code <LockOpen size={16} />
+                            </span>
+                          </Button>
+                          
+                          <div className="flex justify-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleSendVerification}
+                              disabled={resendDisabled}
+                              className="text-xs"
+                            >
+                              <RefreshCcw className="mr-2 h-3 w-3" />
+                              {resendDisabled 
+                                ? `Resend in ${resendCountdown}s` 
+                                : "Resend verification code"}
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                   
                   <div className="mt-6 text-center">
